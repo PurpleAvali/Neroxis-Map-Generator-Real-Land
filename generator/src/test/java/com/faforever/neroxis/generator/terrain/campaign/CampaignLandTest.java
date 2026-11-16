@@ -12,8 +12,9 @@ class CampaignLandTest {
 
     @Test
     void sameSeedGivesSameLand() {
-        assertArrayEquals(CampaignLand.generate(7, SIZE), CampaignLand.generate(7, SIZE));
-        assertFalse(java.util.Arrays.equals(CampaignLand.generate(7, SIZE), CampaignLand.generate(8, SIZE)));
+        assertArrayEquals(CampaignLand.generate(7, SIZE).height(), CampaignLand.generate(7, SIZE).height());
+        assertFalse(java.util.Arrays.equals(CampaignLand.generate(7, SIZE).height(),
+                                            CampaignLand.generate(8, SIZE).height()));
     }
 
     /** A 10 km map; cliff widths are in cells, so smaller grids are mostly cliff. */
@@ -25,7 +26,7 @@ class CampaignLandTest {
     void landShareAndBuildableGroundMatchCampaignMaps() {
         int size = MISSION_SIZE;
         for (long seed = 1; seed <= 2; seed++) {
-            float[] h = CampaignLand.generate(seed, size);
+            float[] h = CampaignLand.generate(seed, size).height();
             int land = 0;
             int flat = 0;
             for (int y = 1; y < size - 1; y++) {
@@ -72,6 +73,35 @@ class CampaignLandTest {
         }
         assertTrue(steepest < Terraces.CLIFF_STEP + .05f, "steepest step " + steepest);
         assertEquals(5f, (h[size / 2 - 1] + h[size / 2]) / 2, .01f, "talus keeps the ground's volume");
+    }
+
+    @Test
+    void cliffSmoothingRoundsStairsAndLeavesFlatsExact() {
+        int size = 64;
+        float[] h = new float[size * size];
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                // A rim at a shallow angle to the grid: one-cell stairs along its length.
+                h[x + y * size] = x > 20 + y * .4f ? 10 : 0;
+            }
+        }
+        Terraces.talus(h, size, Terraces.CLIFF_STEP, 40);
+        float[] before = h.clone();
+        Terraces.smoothCliffs(h, size, Terraces.CLIFF_MIN_STEP, 3);
+        assertTrue(roughness(h, size) < roughness(before, size), "smoothing did not round the rim");
+        assertEquals(before[2 + 32 * size], h[2 + 32 * size], "a far flat cell moved");
+        assertEquals(before[size - 3 + 32 * size], h[size - 3 + 32 * size], "a far flat cell moved");
+    }
+
+    private static float roughness(float[] h, int size) {
+        float sum = 0;
+        for (int y = 1; y < size - 1; y++) {
+            for (int x = 1; x < size - 1; x++) {
+                int i = x + y * size;
+                sum += StrictMath.abs(4 * h[i] - h[i - 1] - h[i + 1] - h[i - size] - h[i + size]);
+            }
+        }
+        return sum;
     }
 
     @Test

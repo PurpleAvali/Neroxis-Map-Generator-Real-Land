@@ -24,6 +24,10 @@ final class Terraces {
     /** Tier edges wander up and down by this share of a step, so rims are ragged instead of contour lines. */
     private static final float RIM_JITTER = .3f;
 
+    /** Cells stepping more than this to a neighbour count as cliff and get smoothed; flats stay exact. */
+    static final float CLIFF_MIN_STEP = .3f;
+    private static final int CLIFF_SMOOTH_PASSES = 3;
+
     private Terraces() {}
 
     static void apply(float[] height, int size, long seed) {
@@ -58,6 +62,7 @@ final class Terraces {
             height[i] = flat + (height[i] - flat) * ramp * reach;
         }
         talus(height, size, CLIFF_STEP, TALUS_PASSES);
+        smoothCliffs(height, size, CLIFF_MIN_STEP, CLIFF_SMOOTH_PASSES);
     }
 
     /** -1 below the beach line, 0..TIERS-1 for a tier, TIERS above the top tier (ridges keep their shape). */
@@ -131,5 +136,35 @@ final class Terraces {
         float move = StrictMath.copySign(excess / 6, diff);
         delta[a] -= move;
         delta[b] += move;
+    }
+
+    /**
+     * Averages each cliff cell with its 3x3 neighbourhood, {@code passes} times. The talus pass works along the grid
+     * axes, so diagonal rims come out as stairs; this rounds them without touching the flats.
+     */
+    static void smoothCliffs(float[] height, int size, float minStep, int passes) {
+        float[] next = new float[height.length];
+        for (int pass = 0; pass < passes; pass++) {
+            System.arraycopy(height, 0, next, 0, height.length);
+            for (int y = 1; y < size - 1; y++) {
+                for (int x = 1; x < size - 1; x++) {
+                    int i = x + y * size;
+                    float h = height[i];
+                    float step = StrictMath.max(StrictMath.max(StrictMath.abs(h - height[i - 1]),
+                                                               StrictMath.abs(h - height[i + 1])),
+                                                StrictMath.max(StrictMath.abs(h - height[i - size]),
+                                                               StrictMath.abs(h - height[i + size])));
+                    if (step <= minStep) {
+                        continue;
+                    }
+                    float sum = 0;
+                    for (int dy = -size; dy <= size; dy += size) {
+                        sum += height[i + dy - 1] + height[i + dy] + height[i + dy + 1];
+                    }
+                    next[i] = sum / 9;
+                }
+            }
+            System.arraycopy(next, 0, height, 0, height.length);
+        }
     }
 }

@@ -4,7 +4,7 @@ import java.util.SplittableRandom;
 
 /**
  * Campaign-style land as heights in game units relative to sea level: ridge belts with one grain and a ragged coast,
- * cut by river erosion, then the lowland stepped into flat tiers with cliff rims and ramps.
+ * cut by river erosion, the lowland stepped into flat tiers with cliff rims and ramps, then rivers and lakes.
  */
 public final class CampaignLand {
     private static final int EROSION_PASSES = 24;
@@ -15,12 +15,21 @@ public final class CampaignLand {
 
     private CampaignLand() {}
 
-    /** A {@code size} x {@code size} grid, row-major (index x + y * size); the same seed gives the same grid. */
-    public static float[] generate(long seed, int size) {
+    /**
+     * Grids of {@code size} x {@code size}, row-major (index x + y * size): {@code height} in game units relative
+     * to sea level, and {@code flow}, the share of all cells that drain through each cell over the eroded land
+     * before terracing (valley floors and riverbeds).
+     */
+    public record Land(float[] height, float[] flow) {}
+
+    /** The same seed gives the same land. */
+    public static Land generate(long seed, int size) {
         SplittableRandom random = new SplittableRandom(seed);
         float[] height = Landform.generate(random.nextLong(), size);
         StreamErosion.erode(height, size, EROSION_PASSES, EROSION_DEPTH_PER_PASS, VALLEY_RADIUS);
+        float[] flow = StreamErosion.flow(height, size);
         Terraces.apply(height, size, random.nextLong());
-        return height;
+        Water.carve(height, size, random.nextLong());
+        return new Land(height, flow);
     }
 }
