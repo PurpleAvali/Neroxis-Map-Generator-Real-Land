@@ -461,7 +461,10 @@ public class MapGeneratorCommand implements Callable<Integer> {
         if (customStyleOptions.getPropStyle() != null) {
             propStyle = customStyleOptions.getPropStyle();
         } else {
-            propStyle = PropStyle.values()[random.nextInt(PropStyle.values().length)];
+            List<PropStyle> propPool = Arrays.stream(PropStyle.values())
+                                             .filter(style -> style != PropStyle.CAMPAIGN)
+                                             .toList();
+            propStyle = propPool.get(random.nextInt(propPool.size()));
         }
 
         if (customStyleOptions.getReclaimDensity() != null) {

@@ -503,6 +503,26 @@ public class MapGeneratorCommandTest {
         assertTrue(map1.getMexCount() >= 2 * 14, "mexes " + map1.getMexCount());
     }
 
+    @Test
+    public void TestCampaignPropsLeaveRoomForBases() {
+        MapGeneratorCommand instance = new MapGeneratorCommand();
+        new CommandLine(instance).parseArgs("--seed", "12", "--terrain-style", "CAMPAIGN", "--resource-style",
+                                            "CAMPAIGN", "--prop-style", "CAMPAIGN", "--biome", "WINDINGRIVER",
+                                            "--map-size", "512", "--spawn-count", "2", "--num-teams", "1");
+        SCMap map = MapGeneratorCommand.generate(instance.createMapNameParameters(), false, false).map();
+        java.util.List<String> trees = map.getBiome().propMaterials().treeGroups();
+        long treesInBases = map.getProps()
+                               .stream()
+                               .filter(prop -> trees.contains(prop.getPath()))
+                               .filter(prop -> map.getSpawns()
+                                                  .stream()
+                                                  .anyMatch(spawn -> spawn.getPosition()
+                                                                          .getXZDistance(prop.getPosition()) < 55))
+                               .count();
+        assertEquals(0, treesInBases);
+        assertTrue(map.getProps().stream().anyMatch(prop -> trees.contains(prop.getPath())), "no trees at all");
+    }
+
     @ParameterizedTest
     @MethodSource("resourceStyles")
     public void TestEqualityResourceStyleSpecified(ResourceStyle resourceStyle) throws IOException {

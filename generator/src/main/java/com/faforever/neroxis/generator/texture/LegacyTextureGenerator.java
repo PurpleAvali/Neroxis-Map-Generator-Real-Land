@@ -32,8 +32,8 @@ public abstract class LegacyTextureGenerator extends TextureGenerator {
     private @Nullable FloatMask campaignFlow;
     /** Ground this far above the water counts as an upper tier; the lowest tier sits a little above it. */
     private static final float UPPER_TIER_ABOVE_WATER = 9f;
-    /** A cell is a riverbed when this share of the map drains through it, about 1500 cells on a 20 km map. */
-    private static final float RIVERBED_FLOW_SHARE = 1.5e-3f;
+    /** A cell is a riverbed when this share of the map drains through it, about 4000 cells on a 20 km map. */
+    private static final float RIVERBED_FLOW_SHARE = 4e-3f;
 
     @Override
     protected void setupTexturePipeline() {
