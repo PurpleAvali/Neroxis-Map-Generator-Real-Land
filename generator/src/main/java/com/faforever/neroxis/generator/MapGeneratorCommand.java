@@ -399,6 +399,17 @@ public class MapGeneratorCommand implements Callable<Integer> {
             throw new CommandLine.ParameterException(spec.commandLine(), String.format(
                     "Terrain symmetry `%s` not compatible with Num Teams `%d`", terrainSymmetry, numTeams));
         }
+
+        // Campaign mass promises every player reachable expansions, which only campaign terrain on a 10 km or
+        // larger map can keep.
+        StyleOptions styleOptions = generationOptions.getCasualOptions().getStyleOptions();
+        CustomStyleOptions custom = styleOptions == null ? null : styleOptions.getCustomStyleOptions();
+        if (custom != null && custom.getResourceStyle() == ResourceStyle.CAMPAIGN
+            && (custom.getTerrainStyle() != TerrainStyle.CAMPAIGN || basicOptions.getMapSize() < 512)) {
+            throw new CommandLine.ParameterException(spec.commandLine(),
+                                                     "Resource style CAMPAIGN needs terrain style CAMPAIGN and a "
+                                                     + "map size of at least 512 (10km)");
+        }
     }
 
     private @Nullable MapStyle createMapStyle(GenerationOptions generationOptions) {
@@ -431,13 +442,20 @@ public class MapGeneratorCommand implements Callable<Integer> {
         if (customStyleOptions.getTerrainStyle() != null) {
             terrainStyle = customStyleOptions.getTerrainStyle();
         } else {
-            terrainStyle = TerrainStyle.values()[random.nextInt(TerrainStyle.values().length)];
+            // Campaign styles are opt-in; leaving them out keeps random maps as upstream makes them.
+            List<TerrainStyle> terrainPool = Arrays.stream(TerrainStyle.values())
+                                                   .filter(style -> style != TerrainStyle.CAMPAIGN)
+                                                   .toList();
+            terrainStyle = terrainPool.get(random.nextInt(terrainPool.size()));
         }
 
         if (customStyleOptions.getResourceStyle() != null) {
             resourceStyle = customStyleOptions.getResourceStyle();
         } else {
-            resourceStyle = ResourceStyle.values()[random.nextInt(ResourceStyle.values().length)];
+            List<ResourceStyle> resourcePool = Arrays.stream(ResourceStyle.values())
+                                                     .filter(style -> style != ResourceStyle.CAMPAIGN)
+                                                     .toList();
+            resourceStyle = resourcePool.get(random.nextInt(resourcePool.size()));
         }
 
         if (customStyleOptions.getPropStyle() != null) {

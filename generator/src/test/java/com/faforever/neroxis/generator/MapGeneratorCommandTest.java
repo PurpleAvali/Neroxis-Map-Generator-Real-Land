@@ -38,6 +38,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @NullMarked
@@ -82,8 +83,10 @@ public class MapGeneratorCommandTest {
         });
     }
 
+    /** Every resource style that works on any terrain; CAMPAIGN needs campaign terrain and has its own tests. */
     private static Stream<ResourceStyle> resourceStyles() {
-        return Arrays.stream(ResourceStyle.values()).mapMulti((generator, consumer) -> {
+        return Arrays.stream(ResourceStyle.values()).filter(style -> style != ResourceStyle.CAMPAIGN)
+                     .mapMulti((generator, consumer) -> {
             for (int i = 0; i < NUM_DETERMINISM_REPEATS; i++) {
                 consumer.accept(generator);
             }
@@ -471,6 +474,33 @@ public class MapGeneratorCommandTest {
         assertEquals(hashArray1, hashArray2);
         assertSCMapEquality(map1, map2);
         assertSCMapSymmetric(map1, generationResults1.symmetrySettings());
+    }
+
+    @Test
+    public void TestCampaignResourcesNeedCampaignTerrain() {
+        MapGeneratorCommand instance = new MapGeneratorCommand();
+        new CommandLine(instance).parseArgs("--resource-style", "CAMPAIGN", "--terrain-style", "BASIC", "--map-size",
+                                            "512", "--spawn-count", "2");
+        CommandLine.ParameterException e = assertThrows(CommandLine.ParameterException.class,
+                                                        instance::createMapNameParameters);
+        assertTrue(String.valueOf(e.getMessage()).contains("CAMPAIGN"), e.getMessage());
+    }
+
+    @Test
+    public void TestCampaignMapRegeneratesFromItsName() throws IOException {
+        MapGeneratorCommand instance1 = new MapGeneratorCommand();
+        new CommandLine(instance1).parseArgs("--seed", "11", "--terrain-style", "CAMPAIGN", "--resource-style",
+                                             "CAMPAIGN", "--map-size", "512", "--spawn-count", "2", "--num-teams",
+                                             "1");
+        MapNameParameters mapNameParameters1 = instance1.createMapNameParameters();
+        SCMap map1 = MapGeneratorCommand.generate(mapNameParameters1, false, false).map();
+
+        MapGeneratorCommand instance2 = new MapGeneratorCommand();
+        new CommandLine(instance2).parseArgs("--map-name", GeneratedMapNameEncoder.encode(mapNameParameters1));
+        SCMap map2 = MapGeneratorCommand.generate(instance2.createMapNameParameters(), false, false).map();
+
+        assertSCMapEquality(map1, map2);
+        assertTrue(map1.getMexCount() >= 2 * 14, "mexes " + map1.getMexCount());
     }
 
     @ParameterizedTest
