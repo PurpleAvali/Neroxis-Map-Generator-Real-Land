@@ -3,6 +3,7 @@ package com.faforever.neroxis.generator.util.serial;
 import com.faforever.neroxis.generator.ParameterConstraints;
 import com.faforever.neroxis.generator.prop.BasicPropGenerator;
 import com.faforever.neroxis.generator.prop.BoulderFieldPropGenerator;
+import com.faforever.neroxis.generator.prop.CampaignPropGenerator;
 import com.faforever.neroxis.generator.prop.EnemyCivPropGenerator;
 import com.faforever.neroxis.generator.prop.ForrestSomethingPropGenerator;
 import com.faforever.neroxis.generator.prop.HighReclaimPropGenerator;
@@ -30,7 +31,8 @@ public enum PropStyle implements HasParameterConstraints {
     NEUTRAL_CIV(NeutralCivPropGenerator::new, ParameterConstraints.ANY),
     ROCK_FIELD(RockFieldPropGenerator::new, ParameterConstraints.ANY),
     SMALL_BATTLE(SmallBattlePropGenerator::new, ParameterConstraints.ANY),
-    FORREST_SOMETHING(ForrestSomethingPropGenerator::new, ParameterConstraints.ANY);
+    FORREST_SOMETHING(ForrestSomethingPropGenerator::new, ParameterConstraints.ANY),
+    CAMPAIGN(CampaignPropGenerator::new, ParameterConstraints.ANY);
 
     private final Supplier<com.faforever.neroxis.generator.prop.PropGenerator> generatorSupplier;
     private final ParameterConstraints parameterConstraints;

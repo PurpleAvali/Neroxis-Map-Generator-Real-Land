@@ -2,6 +2,7 @@ package com.faforever.neroxis.generator.util.serial;
 
 import com.faforever.neroxis.generator.ParameterConstraints;
 import com.faforever.neroxis.generator.resource.BasicResourceGenerator;
+import com.faforever.neroxis.generator.resource.CampaignResourceGenerator;
 import com.faforever.neroxis.generator.resource.HighMexLandLowMexWaterResourceGenerator;
 import com.faforever.neroxis.generator.resource.LowMexResourceGenerator;
 import com.faforever.neroxis.generator.resource.OneHydroFourMexResourceGenerator;
@@ -25,7 +26,8 @@ public enum ResourceStyle implements HasParameterConstraints {
     WATER_MEX(WaterMexResourceGenerator::new, ParameterConstraints.ANY),
     HI_MEX_LAND_LOW_MEX_WATER(HighMexLandLowMexWaterResourceGenerator::new, ParameterConstraints.ANY),
     ONE_HYDRO_NO_MEX(OneHydroPerSpawnResourceGenerator::new, ParameterConstraints.ANY),
-    ONE_HYDRO_FOUR_MEX(OneHydroFourMexResourceGenerator::new, ParameterConstraints.ANY);
+    ONE_HYDRO_FOUR_MEX(OneHydroFourMexResourceGenerator::new, ParameterConstraints.ANY),
+    CAMPAIGN(CampaignResourceGenerator::new, ParameterConstraints.ANY);
 
     private final Supplier<com.faforever.neroxis.generator.resource.ResourceGenerator> generatorSupplier;
     private final ParameterConstraints parameterConstraints;

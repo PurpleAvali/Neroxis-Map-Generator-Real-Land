@@ -4,7 +4,9 @@ import com.faforever.neroxis.biomes.BiomeName;
 import com.faforever.neroxis.biomes.Biomes;
 import com.faforever.neroxis.generator.prop.PropGenerator;
 import com.faforever.neroxis.generator.resource.ResourceGenerator;
+import com.faforever.neroxis.generator.terrain.CampaignTerrainGenerator;
 import com.faforever.neroxis.generator.terrain.SpawnFirstTerrainGenerator;
+import com.faforever.neroxis.generator.terrain.campaign.SitePlan;
 import com.faforever.neroxis.generator.terrain.TerrainGenerator;
 import com.faforever.neroxis.generator.texture.BrimstoneTextureGenerator;
 import com.faforever.neroxis.generator.texture.CrystallineTextureGenerator;
@@ -47,7 +49,8 @@ public class MapGenerator {
     private static final ExecutorService PLACEMENT_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 
     static GenerationResults generate(GeneratorParameters generatorParameters,
-                                      RandomGenerator.SplittableGenerator random, boolean debug, boolean visualize) {
+                                      RandomGenerator.SplittableGenerator random, SitePlan sitePlan, boolean debug,
+                                      boolean visualize) {
         Predicate<HasParameterConstraints> constraintsMatchPredicate = hasConstraints -> hasConstraints.parameterConstraints()
                                                                                                        .matches(
                                                                                                                generatorParameters);
@@ -71,6 +74,9 @@ public class MapGenerator {
         while (map.getSpawnCount() != generatorParameters.spawnCount()) {
             try {
                 TerrainGenerator attemptedTerrainGenerator = terrainStyle.getGeneratorSupplier().get();
+                if (attemptedTerrainGenerator instanceof CampaignTerrainGenerator campaign) {
+                    campaign.setSitePlan(sitePlan);
+                }
                 if (attemptedTerrainGenerator instanceof SpawnFirstTerrainGenerator) {
                     SpawnPlacer spawnPlacer = new SpawnPlacer(map, random.split());
                     DebugUtil.timedRun("com.faforever.neroxis.map.generator", "placeSpawns",

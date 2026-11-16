@@ -4,6 +4,7 @@ import com.faforever.neroxis.generator.ParameterConstraints;
 import com.faforever.neroxis.generator.terrain.BasicLastTerrainGenerator;
 import com.faforever.neroxis.generator.terrain.BasicTerrainGenerator;
 import com.faforever.neroxis.generator.terrain.BigIslandsTerrainGenerator;
+import com.faforever.neroxis.generator.terrain.CampaignTerrainGenerator;
 import com.faforever.neroxis.generator.terrain.CenterLakeLastTerrainGenerator;
 import com.faforever.neroxis.generator.terrain.CenterLakeTerrainGenerator;
 import com.faforever.neroxis.generator.terrain.DropPlateauLastTerrainGenerator;
@@ -79,7 +80,8 @@ public enum TerrainStyle implements HasParameterConstraints {
     FRACTAL_LAND(FractalLandLastTerrainGenerator::new, ParameterConstraints.ANY),
     FRACTAL_PLATEAU(FractalPlateauLastTerrainGenerator::new, ParameterConstraints.ANY),
     FRACTAL_NAVY(FractalNavyLastTerrainGenerator::new, ParameterConstraints.ANY),
-    SETONS(SetonishLastTerrainGenerator::new, ParameterConstraints.ANY);
+    SETONS(SetonishLastTerrainGenerator::new, ParameterConstraints.ANY),
+    CAMPAIGN(CampaignTerrainGenerator::new, ParameterConstraints.ANY);
 
     private final Supplier<com.faforever.neroxis.generator.terrain.TerrainGenerator> generatorSupplier;
     private final ParameterConstraints parameterConstraints;

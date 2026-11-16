@@ -44,6 +44,9 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import com.faforever.neroxis.generator.terrain.campaign.SitePlan;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -102,6 +105,22 @@ public class MapGeneratorCommand implements Callable<Integer> {
     private DebugMixin debugMixin = new DebugMixin();
     @CommandLine.Mixin
     private VisualizeMixin visualizeMixin = new VisualizeMixin();
+    @Option(
+            names = "--site",
+            order = 10001,
+            description = "CAMPAIGN terrain only: a place to shape the land around, name:KIND:x,z,radius with x and "
+                          + "z in 0..1 and KIND one of CITY, GATE, ARRAY, BASE. Repeatable. Not encoded in the map "
+                          + "name."
+    )
+    private List<String> siteSpecs = new ArrayList<>();
+
+    @Option(
+            names = "--lane",
+            order = 10002,
+            description = "CAMPAIGN terrain only: from-to between two sites, graded into a walkable path. Repeatable."
+    )
+    private List<String> laneSpecs = new ArrayList<>();
+
     @Option(names = "--preview-path", order = 10000, description = "Folder to save the map previews to")
     private @Nullable Path previewFolder;
     @CommandLine.Mixin
@@ -119,6 +138,11 @@ public class MapGeneratorCommand implements Callable<Integer> {
     }
 
     static GenerationResults generate(MapNameParameters mapNameParameters, boolean debug, boolean visualize) {
+        return generate(mapNameParameters, SitePlan.NONE, debug, visualize);
+    }
+
+    static GenerationResults generate(MapNameParameters mapNameParameters, SitePlan sitePlan, boolean debug,
+                                      boolean visualize) {
         RandomGenerator.SplittableGenerator random = mapNameParameters.createRandom();
         MapStyle mapStyle;
         if (mapNameParameters.mode() instanceof MapNameParameters.Casual(_, MapStyle specifiedMapStyle) &&
@@ -161,7 +185,7 @@ public class MapGeneratorCommand implements Callable<Integer> {
 
         long startTime = System.currentTimeMillis();
 
-        GenerationResults generationResults = MapGenerator.generate(generatorParameters, random.split(),
+        GenerationResults generationResults = MapGenerator.generate(generatorParameters, random.split(), sitePlan,
                                                                     debug && mapNameParameters.allowDebug(),
                                                                     visualize && mapNameParameters.allowDebug());
         SCMap map = generationResults.map();
@@ -330,7 +354,7 @@ public class MapGeneratorCommand implements Callable<Integer> {
 
             System.out.println(GeneratedMapNameEncoder.encode(mapNameParameters));
 
-            GenerationResults generationResults = generate(mapNameParameters, debugMixin.isDebug(),
+            GenerationResults generationResults = generate(mapNameParameters, sitePlan(), debugMixin.isDebug(),
                                                            visualizeMixin.isVisualize());
 
             save(generationResults, mapNameParameters, outputFolderMixin.getOutputPath(), debugMixin.isDebug());
@@ -341,6 +365,14 @@ public class MapGeneratorCommand implements Callable<Integer> {
         }
 
         return 0;
+    }
+
+    SitePlan sitePlan() {
+        try {
+            return SitePlan.parse(siteSpecs, laneSpecs);
+        } catch (IllegalArgumentException e) {
+            throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage(), e);
+        }
     }
 
     MapNameParameters createMapNameParameters() {
@@ -399,6 +431,20 @@ public class MapGeneratorCommand implements Callable<Integer> {
             throw new CommandLine.ParameterException(spec.commandLine(), String.format(
                     "Terrain symmetry `%s` not compatible with Num Teams `%d`", terrainSymmetry, numTeams));
         }
+
+        // Campaign mass promises every player reachable expansions, which only campaign terrain on a 10 km or
+        // larger map can keep.
+        StyleOptions styleOptions = generationOptions.getCasualOptions().getStyleOptions();
+        CustomStyleOptions custom = styleOptions == null ? null : styleOptions.getCustomStyleOptions();
+        if (!siteSpecs.isEmpty() && (custom == null || custom.getTerrainStyle() != TerrainStyle.CAMPAIGN)) {
+            throw new CommandLine.ParameterException(spec.commandLine(), "--site needs terrain style CAMPAIGN");
+        }
+        if (custom != null && custom.getResourceStyle() == ResourceStyle.CAMPAIGN
+            && (custom.getTerrainStyle() != TerrainStyle.CAMPAIGN || basicOptions.getMapSize() < 512)) {
+            throw new CommandLine.ParameterException(spec.commandLine(),
+                                                     "Resource style CAMPAIGN needs terrain style CAMPAIGN and a "
+                                                     + "map size of at least 512 (10km)");
+        }
     }
 
     private @Nullable MapStyle createMapStyle(GenerationOptions generationOptions) {
@@ -431,19 +477,29 @@ public class MapGeneratorCommand implements Callable<Integer> {
         if (customStyleOptions.getTerrainStyle() != null) {
             terrainStyle = customStyleOptions.getTerrainStyle();
         } else {
-            terrainStyle = TerrainStyle.values()[random.nextInt(TerrainStyle.values().length)];
+            // Campaign styles are opt-in; leaving them out keeps random maps as upstream makes them.
+            List<TerrainStyle> terrainPool = Arrays.stream(TerrainStyle.values())
+                                                   .filter(style -> style != TerrainStyle.CAMPAIGN)
+                                                   .toList();
+            terrainStyle = terrainPool.get(random.nextInt(terrainPool.size()));
         }
 
         if (customStyleOptions.getResourceStyle() != null) {
             resourceStyle = customStyleOptions.getResourceStyle();
         } else {
-            resourceStyle = ResourceStyle.values()[random.nextInt(ResourceStyle.values().length)];
+            List<ResourceStyle> resourcePool = Arrays.stream(ResourceStyle.values())
+                                                     .filter(style -> style != ResourceStyle.CAMPAIGN)
+                                                     .toList();
+            resourceStyle = resourcePool.get(random.nextInt(resourcePool.size()));
         }
 
         if (customStyleOptions.getPropStyle() != null) {
             propStyle = customStyleOptions.getPropStyle();
         } else {
-            propStyle = PropStyle.values()[random.nextInt(PropStyle.values().length)];
+            List<PropStyle> propPool = Arrays.stream(PropStyle.values())
+                                             .filter(style -> style != PropStyle.CAMPAIGN)
+                                             .toList();
+            propStyle = propPool.get(random.nextInt(propPool.size()));
         }
 
         if (customStyleOptions.getReclaimDensity() != null) {
