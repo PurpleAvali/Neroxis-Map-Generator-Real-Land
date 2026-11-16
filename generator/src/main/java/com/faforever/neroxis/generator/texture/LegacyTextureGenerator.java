@@ -104,7 +104,11 @@ public abstract class LegacyTextureGenerator extends TextureGenerator {
         BooleanMask gentle = slope.copyAsBooleanMask(.05f).subtract(rock);
         BooleanMask hollow = heightmap.copy().blur(6).subtract(heightmap).copyAsBooleanMask(.25f);
         BooleanMask cliffFoot = rock.copy().inflate(6).subtract(rock).multiply(hollow);
-        BooleanMask riverbed = flow.copyAsBooleanMask(RIVERBED_FLOW_SHARE).inflate(2).multiply(realLand);
+        // Riverbeds only where the ground is a hollow: flow lines across flats would read as roads.
+        BooleanMask riverbed = flow.copyAsBooleanMask(RIVERBED_FLOW_SHARE)
+                                   .inflate(2)
+                                   .multiply(realLand)
+                                   .multiply(heightmap.copy().blur(4).subtract(heightmap).copyAsBooleanMask(.1f));
 
         accentPlateauTexture.init(upperTiers, 0f, .8f).blur(6);
         slopesTexture.init(gentle, 0f, .7f).blur(3);

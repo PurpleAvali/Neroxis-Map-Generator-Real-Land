@@ -79,7 +79,12 @@ final class Sites {
     static void settle(float[] height, int size, SitePlan plan) {
         for (SitePlan.Site site : plan.sites()) {
             float level = site.kind() == SitePlan.Kind.ARRAY ? ARRAY_FLAT : LOWLAND_FLAT;
-            stamp(size, site, site.radius() * CORE, (i, d) -> height[i] = level);
+            float core = site.radius() * CORE;
+            // Ease the core's edge into the ground around it, so settling leaves no ring of a step.
+            stamp(size, site, core, (i, d) -> {
+                float t = Landform.smoothstep(core * .6f, core, d);
+                height[i] = level + (height[i] - level) * t;
+            });
         }
         for (SitePlan.Lane lane : plan.lanes()) {
             int from = cell(plan.site(lane.from()), size);
@@ -282,6 +287,9 @@ final class Sites {
             }
             profile[k] = sum / count;
         }
+        // The ends sit on site cores: keep them at their level so a lane never lifts a site's centre.
+        profile[0] = raw[0];
+        profile[n - 1] = raw[n - 1];
         for (int k = 1; k < n; k++) {
             profile[k] = StrictMath.max(profile[k - 1] - LANE_GRADE, StrictMath.min(profile[k - 1] + LANE_GRADE,
                                                                                  profile[k]));
