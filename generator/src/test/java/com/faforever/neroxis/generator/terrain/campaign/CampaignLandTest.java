@@ -12,9 +12,10 @@ class CampaignLandTest {
 
     @Test
     void sameSeedGivesSameLand() {
-        assertArrayEquals(CampaignLand.generate(7, SIZE).height(), CampaignLand.generate(7, SIZE).height());
-        assertFalse(java.util.Arrays.equals(CampaignLand.generate(7, SIZE).height(),
-                                            CampaignLand.generate(8, SIZE).height()));
+        assertArrayEquals(CampaignLand.generate(7, SIZE, SitePlan.NONE).height(),
+                          CampaignLand.generate(7, SIZE, SitePlan.NONE).height());
+        assertFalse(java.util.Arrays.equals(CampaignLand.generate(7, SIZE, SitePlan.NONE).height(),
+                                            CampaignLand.generate(8, SIZE, SitePlan.NONE).height()));
     }
 
     /** A 10 km map; cliff widths are in cells, so smaller grids are mostly cliff. */
@@ -26,7 +27,7 @@ class CampaignLandTest {
     void landShareAndBuildableGroundMatchCampaignMaps() {
         int size = MISSION_SIZE;
         for (long seed = 1; seed <= 2; seed++) {
-            float[] h = CampaignLand.generate(seed, size).height();
+            float[] h = CampaignLand.generate(seed, size, SitePlan.NONE).height();
             int land = 0;
             int flat = 0;
             for (int y = 1; y < size - 1; y++) {

@@ -22,14 +22,37 @@ public final class CampaignLand {
      */
     public record Land(float[] height, float[] flow) {}
 
-    /** The same seed gives the same land. */
-    public static Land generate(long seed, int size) {
+    /** Land shaped around {@code plan} (empty for none); the same seed and plan give the same land. */
+    public static Land generate(long seed, int size, SitePlan plan) {
         SplittableRandom random = new SplittableRandom(seed);
         float[] height = Landform.generate(random.nextLong(), size);
+        long terraceSeed = random.nextLong();
+        long waterSeed = random.nextLong();
+        if (!plan.isEmpty()) {
+            Sites.shape(height, size, plan, random.nextLong());
+        }
         StreamErosion.erode(height, size, EROSION_PASSES, EROSION_DEPTH_PER_PASS, VALLEY_RADIUS);
         float[] flow = StreamErosion.flow(height, size);
-        Terraces.apply(height, size, random.nextLong());
-        Water.carve(height, size, random.nextLong());
+        Terraces.apply(height, size, terraceSeed);
+        if (plan.isEmpty()) {
+            Water.carve(height, size, waterSeed);
+        } else {
+            // Water never cuts above the lowland, so site land is lifted out of its reach while it digs.
+            boolean[] dry = Sites.keepDry(size, plan);
+            float[] kept = height.clone();
+            for (int i = 0; i < height.length; i++) {
+                if (dry[i]) {
+                    height[i] = Water.LOWLAND_TOP + 1;
+                }
+            }
+            Water.carve(height, size, waterSeed);
+            for (int i = 0; i < height.length; i++) {
+                if (dry[i]) {
+                    height[i] = kept[i];
+                }
+            }
+            Sites.settle(height, size, plan);
+        }
         return new Land(height, flow);
     }
 }

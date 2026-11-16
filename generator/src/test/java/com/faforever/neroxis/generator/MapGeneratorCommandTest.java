@@ -10,11 +10,13 @@ import com.faforever.neroxis.generator.util.serial.ResourceStyle;
 import com.faforever.neroxis.generator.util.serial.TerrainStyle;
 import com.faforever.neroxis.map.Army;
 import com.faforever.neroxis.map.Group;
+import com.faforever.neroxis.map.Marker;
 import com.faforever.neroxis.map.SCMap;
 import com.faforever.neroxis.map.Symmetry;
 import com.faforever.neroxis.map.SymmetrySettings;
 import com.faforever.neroxis.util.ImageUtil;
 import com.faforever.neroxis.util.MapSymmetryTester;
+import com.faforever.neroxis.util.vector.Vector3;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.RepeatedTest;
@@ -501,6 +503,29 @@ public class MapGeneratorCommandTest {
 
         assertSCMapEquality(map1, map2);
         assertTrue(map1.getMexCount() >= 2 * 14, "mexes " + map1.getMexCount());
+    }
+
+    @Test
+    public void TestSitesNeedCampaignTerrain() {
+        MapGeneratorCommand instance = new MapGeneratorCommand();
+        new CommandLine(instance).parseArgs("--terrain-style", "BASIC", "--site", "gate:GATE:0.2,0.8,30",
+                                            "--map-size", "512", "--spawn-count", "2");
+        assertThrows(CommandLine.ParameterException.class, instance::createMapNameParameters);
+    }
+
+    @Test
+    public void TestSitePlanMarksSitesAndGatesInThePlayers() {
+        MapGeneratorCommand instance = new MapGeneratorCommand();
+        new CommandLine(instance).parseArgs("--seed", "13", "--terrain-style", "CAMPAIGN", "--resource-style",
+                                            "CAMPAIGN", "--map-size", "512", "--spawn-count", "2", "--num-teams",
+                                            "1", "--site", "gate:GATE:0.25,0.75,30", "--site",
+                                            "city:CITY:0.6,0.4,35", "--lane", "gate-city");
+        SCMap map = MapGeneratorCommand.generate(instance.createMapNameParameters(), instance.sitePlan(), false,
+                                                 false).map();
+        Marker gateMarker = map.getBlank("SITE_gate");
+        assertTrue(gateMarker != null && map.getBlank("SITE_city") != null, "site markers missing");
+        Vector3 gate = gateMarker.getPosition();
+        map.getSpawns().forEach(spawn -> assertTrue(spawn.getPosition().getXZDistance(gate) < 30, "spawn off gate"));
     }
 
     @Test
